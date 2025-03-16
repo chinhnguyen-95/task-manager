@@ -10,6 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const UserIDKey = "userID"
+
 func JWTAuthMiddleware(publicKey *rsa.PublicKey) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -25,7 +27,13 @@ func JWTAuthMiddleware(publicKey *rsa.PublicKey) gin.HandlerFunc {
 			return
 		}
 
-		c.Set("userID", claims["sub"])
+		userID, ok := claims["sub"].(string)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid subject claim"})
+			return
+		}
+
+		c.Set(UserIDKey, userID)
 		c.Next()
 	}
 }

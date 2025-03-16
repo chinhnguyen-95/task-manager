@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"net/http"
+	"task-manager/internal/rest/middleware"
 	"time"
 
 	"task-manager/domain"
@@ -51,7 +52,7 @@ func createTaskHandler(service TaskService) gin.HandlerFunc {
 			return
 		}
 
-		userIDStr, _ := c.Get("userID")
+		userIDStr, _ := c.Get(middleware.UserIDKey)
 		userID, err := uuid.Parse(userIDStr.(string))
 		if err != nil {
 			c.JSON(http.StatusBadRequest, dto.ErrorResponse{Error: "invalid user ID"})
@@ -66,6 +67,7 @@ func createTaskHandler(service TaskService) gin.HandlerFunc {
 			ProjectID:   req.ProjectID,
 			AssignedTo:  userID,
 			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 
 		if err := service.Create(c, t); err != nil {
@@ -242,7 +244,7 @@ func assignTaskHandler(service TaskService) gin.HandlerFunc {
 func commentOnTaskHandler(service TaskService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		taskID, _ := uuid.Parse(c.Param("id"))
-		userIDStr, _ := c.Get("userID")
+		userIDStr, _ := c.Get(middleware.UserIDKey)
 		userID, _ := uuid.Parse(userIDStr.(string))
 
 		var req dto.CommentRequest

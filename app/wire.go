@@ -5,6 +5,8 @@ package main
 
 import (
 	"task-manager/auth"
+	"task-manager/internal/grpc"
+	middleware2 "task-manager/internal/grpc/middleware"
 	"task-manager/internal/repository/postgres"
 	"task-manager/internal/rest"
 	"task-manager/internal/rest/middleware"
@@ -17,7 +19,19 @@ import (
 	"github.com/google/wire"
 )
 
-func InitializeServer() (*rest.Server, error) {
+type App struct {
+	RestServer *rest.Server
+	GrpcServer *grpc.Server
+}
+
+func NewApp(rest *rest.Server, grpc *grpc.Server) *App {
+	return &App{
+		RestServer: rest,
+		GrpcServer: grpc,
+	}
+}
+
+func InitializeApp() (*App, error) {
 	wire.Build(
 		jwtutil.FetchRSAPublicKeyFromJWKS,
 
@@ -45,7 +59,18 @@ func InitializeServer() (*rest.Server, error) {
 		wire.Bind(new(rest.ProjectService), new(*project.Service)),
 
 		rest.NewServer,
+
+		middleware2.NewJWTUnaryInterceptor,
+
+		wire.Bind(new(grpc.AuthService), new(*auth.Service)),
+		wire.Bind(new(grpc.TaskService), new(*task.Service)),
+		wire.Bind(new(grpc.UserService), new(*user.Service)),
+		wire.Bind(new(grpc.ProjectService), new(*project.Service)),
+
+		grpc.NewServer,
+
+		NewApp,
 	)
 
-	return &rest.Server{}, nil
+	return &App{}, nil
 }
