@@ -1,0 +1,14 @@
+{
+  "realm": "task-manager",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "task-client",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["*"]
+    }
+  ]
+}

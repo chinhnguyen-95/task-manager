@@ -1,0 +1,75 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-manager-api
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - backend
+
+  migrate:
+    build:
+      context: .
+    command: goose -dir ./migrations postgres "postgres://demo:demo@db:5432/taskdb?sslmode=disable" up
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+
+  db:
+    image: postgres:17
+    container_name: task-manager-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: taskdb
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U demo -d taskdb" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: task-manager-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json
+    healthcheck:
+      test: [ "CMD-SHELL", "echo > /dev/tcp/localhost/8080" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8081:8080"
+    networks:
+      - backend
+
+volumes:
+  postgres-data:
+
+networks:
+  backend:
+    driver: bridge
